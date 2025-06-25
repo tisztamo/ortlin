@@ -6,12 +6,15 @@ import { CircleCheck, KeyRound } from "lucide-preact";
 import Input, { type ChangeHandler } from "./Input.tsx";
 import { computed, useSignal } from "@preact/signals";
 import apiKeyService from "../services/apiKeyService.ts";
+import baseUrlService from "../services/baseUrlService.ts";
 import alertSignal from "../signals/alertSignal.ts";
 import Icon from "./Icon.tsx";
 
 export default function ModalApiKeyConfigure() {
     const key = useSignal("");
+    const url = useSignal("");
     const existingKey = useSignal("");
+    const existingUrl = useSignal("");
     const maskedExistingKey = computed(() => {
         const firstPart = existingKey.value.slice(0, 4);
         const lastPart = existingKey.value.slice(-4);
@@ -31,20 +34,29 @@ export default function ModalApiKeyConfigure() {
         apiKeyManageSignal.toggleModalVisibility();
     };
     const handleConfigureClick = async () => {
-        const saved = await apiKeyService.set(key.value);
-        if (!saved) return;
-        key.value = "";
+        if (key.value) {
+            const saved = await apiKeyService.set(key.value);
+            if (!saved) return;
+            key.value = "";
+        }
+        await baseUrlService.set(url.value);
         apiKeyManageSignal.toggleModalVisibility();
         alertSignal.replaceMessage(
-            "Your OpenAI API key is encrypted and securely configured",
+            "OpenAI API configuration saved",
         );
     };
     const handleInputChange: ChangeHandler = (name, value) => {
         if (name === "key") key.value = value;
+        if (name === "base_url") url.value = value;
     };
     const readExistingKey = async () => {
-        const key = await apiKeyService.get();
+        const [key, base] = await Promise.all([
+            apiKeyService.get(),
+            baseUrlService.get(),
+        ]);
         existingKey.value = key;
+        existingUrl.value = base;
+        url.value = base;
     };
     useEffect(() => {
         if (apiKeyManageSignal.isModalVisible.value) {
@@ -61,7 +73,7 @@ export default function ModalApiKeyConfigure() {
                 onMouseDown={handleCardMouseDown}
             >
                 <h3 class="text-lg text-slate-100 font-semibold mb-1">
-                    Configure OpenAI API key
+                    Configure OpenAI API
                 </h3>
                 <p class="text-slate-300 text-base mb-4">
                     Your OpenAI API key will be encrypted and securely stored in
@@ -78,12 +90,34 @@ export default function ModalApiKeyConfigure() {
                         </p>
                     </div>
                 )}
+                {existingUrl.value && (
+                    <div class="text-slate-100 text-base mb-5 flex items-center gap-2 break-all">
+                        <Icon Icon={CircleCheck} size={19} />
+                        <p>
+                            Configured API base URL:
+                            <span class="bg-slate-700 rounded px-1 py-0.5 ml-2 text-slate-400">
+                                {existingUrl.value}
+                            </span>
+                        </p>
+                    </div>
+                )}
                 <div>
                     <Input
                         name="key"
                         type="text"
                         label="OpenAI API key"
                         value={key.value}
+                        required={true}
+                        helpers={[]}
+                        onChange={handleInputChange}
+                    />
+                </div>
+                <div class="mt-5">
+                    <Input
+                        name="base_url"
+                        type="text"
+                        label="OpenAI base URL"
+                        value={url.value}
                         required={true}
                         helpers={[]}
                         onChange={handleInputChange}
@@ -104,7 +138,7 @@ export default function ModalApiKeyConfigure() {
                         Icon={KeyRound}
                         onClick={handleConfigureClick}
                     >
-                        Configure OpenAI API key
+                        Configure OpenAI API
                     </Button>
                 </div>
             </div>
