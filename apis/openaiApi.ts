@@ -1,4 +1,5 @@
 import apiKeyService from "../services/apiKeyService.ts";
+import baseUrlService from "../services/baseUrlService.ts";
 import bufferService from "../services/bufferService.ts";
 import alertSignal from "../signals/alertSignal.ts";
 import apiKeyManageSignal from "../signals/apiKeyManageSignal.ts";
@@ -13,7 +14,12 @@ const openaiApi = {
             apiKeyManageSignal.toggleModalVisibility();
             return;
         }
-        return new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+        const baseURL = await baseUrlService.get();
+        return new OpenAI({
+            apiKey,
+            baseURL,
+            dangerouslyAllowBrowser: true,
+        });
     },
 
     async execute<T>(request: () => Promise<T>) {
